@@ -14,7 +14,7 @@ You do not need to build this app from source! You can download and install it d
 3. Open the downloaded file to install it. *(Note: Your phone may ask you to allow installing unknown apps from your browser—this is normal for apps outside the Play Store).*
 
 ## ✨ Features
-*   **Background Toggle Shortcut:** Includes an App Shortcut that rotates through Normal -> Vibrate -> Silent. *(Note: Due to how Samsung's One UI launcher handles App Shortcuts, you will see a brief visual flash of the app opening and immediately closing when triggered).*
+*   **Background Toggle Shortcut:** Includes an App Shortcut that rotates through Normal -> Vibrate -> Silent. The shortcut runs through an invisible activity, so the ringer changes without any app screen or white flash appearing.
 *   **Custom Haptic Feedback:** Feel which mode you just switched to without looking at your screen:
     *   *Normal Mode:* Single, quiet tap.
     *   *Vibrate Mode:* Double pulse.

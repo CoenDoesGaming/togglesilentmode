@@ -23,6 +23,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Invisible activity used by the "Toggle Mode" shortcut (no window, no splash) -->
+        <activity
+            android:name=".ToggleActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:launchMode="singleInstance"
+            android:theme="@android:style/Theme.NoDisplay" />
     </application>
 
 </manifest>
