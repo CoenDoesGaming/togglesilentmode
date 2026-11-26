@@ -39,76 +39,14 @@ class MainActivity : ComponentActivity() {
         // 1. Register the App Shortcut when the app starts
         createAppShortcut()
 
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        // Helper function to play mode-specific haptics
-        fun triggerHapticFeedback(context: Context, mode: Int) {
-            try {
-                val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                    vibratorManager.defaultVibrator
-                } else {
-                    @Suppress("DEPRECATION")
-                    context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-                }
-
-                if (vibrator.hasVibrator()) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        val effect = when (mode) {
-                            AudioManager.RINGER_MODE_NORMAL -> VibrationEffect.createOneShot(25, 80) // Quieter, shorter tap for Normal
-                            AudioManager.RINGER_MODE_VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 80, 60, 80), -1) // Double pulse for Vibrate
-                            AudioManager.RINGER_MODE_SILENT -> VibrationEffect.createWaveform(longArrayOf(0, 30, 50, 30, 50, 30), -1) // Multiple little vibrations for Silent
-                            else -> VibrationEffect.createOneShot(25, 80)
-                        }
-                        vibrator.vibrate(effect)
-                    } else {
-                        @Suppress("DEPRECATION")
-                        when (mode) {
-                            AudioManager.RINGER_MODE_NORMAL -> vibrator.vibrate(25)
-                            AudioManager.RINGER_MODE_VIBRATE -> vibrator.vibrate(longArrayOf(0, 80, 60, 80), -1)
-                            AudioManager.RINGER_MODE_SILENT -> vibrator.vibrate(longArrayOf(0, 30, 50, 30, 50, 30), -1)
-                            else -> vibrator.vibrate(25)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        // 2. Intercept app launch to see if it came from our shortcut
+        // Older shortcut versions pointed at MainActivity; handle them and exit.
         if (intent?.action == "$packageName.TOGGLE_MODE") {
-            if (notificationManager.isNotificationPolicyAccessGranted) {
-                val currentMode = audioManager.ringerMode
-                val ringVolume = audioManager.getStreamVolume(AudioManager.STREAM_RING)
-
-                try {
-                    if (currentMode == AudioManager.RINGER_MODE_NORMAL && ringVolume > 0) {
-                        audioManager.ringerMode = AudioManager.RINGER_MODE_VIBRATE
-                        triggerHapticFeedback(this, AudioManager.RINGER_MODE_VIBRATE)
-                    } else if (currentMode == AudioManager.RINGER_MODE_VIBRATE) {
-                        // Standard Silent Mode
-                        audioManager.ringerMode = AudioManager.RINGER_MODE_SILENT
-                        triggerHapticFeedback(this, AudioManager.RINGER_MODE_SILENT)
-                    } else {
-                        // Restore Normal mode with volume
-                        audioManager.ringerMode = AudioManager.RINGER_MODE_NORMAL
-                        val maxRing = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
-                        audioManager.setStreamVolume(AudioManager.STREAM_RING, maxRing / 2, 0) // Restore to 50%
-                        triggerHapticFeedback(this, AudioManager.RINGER_MODE_NORMAL)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-
-                // Exit immediately so the app doesn't stay open on the screen
+            if (RingerToggle.hasPermission(this)) {
+                RingerToggle.toggle(this)
                 finish()
-
                 return
-            } else {
-                Toast.makeText(this, "Permission required to toggle mode", Toast.LENGTH_LONG).show()
             }
+            Toast.makeText(this, "Permission required to toggle mode", Toast.LENGTH_LONG).show()
         }
 
         setContent {
@@ -140,9 +78,9 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
             val shortcutManager = getSystemService(ShortcutManager::class.java)
 
-            val toggleIntent = Intent(this, MainActivity::class.java).apply {
+            val toggleIntent = Intent(this, ToggleActivity::class.java).apply {
                 action = "$packageName.TOGGLE_MODE"
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
             }
 
             val shortcut = ShortcutInfo.Builder(this, "toggle_mode")
@@ -168,39 +106,7 @@ fun SilentModeController() {
     val notificationManager = remember { context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager }
 
     // Helper to trigger haptics from UI buttons
-    val playHaptic: (Int) -> Unit = { mode ->
-        try {
-            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-                vibratorManager.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            }
-
-            if (vibrator.hasVibrator()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    val effect = when (mode) {
-                        AudioManager.RINGER_MODE_NORMAL -> VibrationEffect.createOneShot(25, 80) // Quieter, shorter tap
-                        AudioManager.RINGER_MODE_VIBRATE -> VibrationEffect.createWaveform(longArrayOf(0, 80, 60, 80), -1)
-                        AudioManager.RINGER_MODE_SILENT -> VibrationEffect.createWaveform(longArrayOf(0, 30, 50, 30, 50, 30), -1) // Multiple little vibrations
-                        else -> VibrationEffect.createOneShot(25, 80)
-                    }
-                    vibrator.vibrate(effect)
-                } else {
-                    @Suppress("DEPRECATION")
-                    when (mode) {
-                        AudioManager.RINGER_MODE_NORMAL -> vibrator.vibrate(25)
-                        AudioManager.RINGER_MODE_VIBRATE -> vibrator.vibrate(longArrayOf(0, 80, 60, 80), -1)
-                        AudioManager.RINGER_MODE_SILENT -> vibrator.vibrate(longArrayOf(0, 30, 50, 30, 50, 30), -1)
-                        else -> vibrator.vibrate(25)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
+    val playHaptic: (Int) -> Unit = { mode -> RingerToggle.playHaptic(context, mode) }
 
     // State variables to track the current mode, volume, and permission status
     var currentMode by remember { mutableIntStateOf(audioManager.ringerMode) }
